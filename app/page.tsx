@@ -30,6 +30,7 @@ import {
   X,
   Upload,
 } from "lucide-react";
+import Testimonials from "./testimoninal";
 
 const services = [
   {
@@ -761,6 +762,8 @@ Please contact me regarding this request.`;
           </div>
         </div>
       </section>
+
+<Testimonials/>
 
       {/* FAQ */}
      <section
