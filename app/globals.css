@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+/* ================================
+   HOME PAGE ENTRANCE ANIMATIONS
+================================ */
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-35px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeRight {
+  from {
+    opacity: 0;
+    transform: translateX(35px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes logoIntro {
+  from {
+    opacity: 0;
+    transform: scale(0.7) rotate(-8deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+.animate-logo-intro {
+  animation: logoIntro 0.8s ease-out both;
+}
+
+.animate-nav-intro {
+  animation: fadeDown 0.7s ease-out 0.15s both;
+}
+
+.animate-hero-title {
+  animation: fadeLeft 0.8s ease-out 0.25s both;
+}
+
+.animate-hero-text {
+  animation: fadeLeft 0.8s ease-out 0.4s both;
+}
+
+.animate-hero-buttons {
+  animation: fadeUp 0.8s ease-out 0.55s both;
+}
+
+.animate-hero-list {
+  animation: fadeUp 0.8s ease-out 0.7s both;
+}
+
+.animate-hero-card {
+  animation: fadeRight 0.9s ease-out 0.4s both;
+}
