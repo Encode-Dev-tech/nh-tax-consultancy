@@ -5,10 +5,10 @@ import { Quote, Star } from "lucide-react";
 
 const testimonials = [
   {
-    name: "Rahul Sharma",
+    name: "Tabish Quamar",
     role: "Founder, Tech Startup",
     review:
-      "Encode.dev delivered an excellent website for our business. The design was modern, fast, and exactly what we needed.",
+      "Encode.dev ",
   },
   {
     name: "Aman Verma",
