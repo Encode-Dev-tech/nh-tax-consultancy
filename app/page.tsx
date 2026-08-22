@@ -996,7 +996,7 @@ export default function Home() {
               <p className="text-xs text-slate-500">
                 Crafted with care by{" "}
                 <span className="font-semibold text-slate-300">
-                  Tabish Quamar
+                  Tabish Quamargjgj
                 </span>
               </p>
 
