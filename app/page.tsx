@@ -1051,7 +1051,7 @@ export default function Home() {
           <div className="mt-10 border-t border-white/10 pt-5">
             <div className="flex flex-col items-center justify-between gap-3 text-center sm:flex-row">
               <p className="text-xs text-slate-500">
-                Crafted with care by{" "}
+                Crafted with care by:{" "}
                 <span className="font-semibold text-slate-300">
                   Tabish Quamar
                 </span>
