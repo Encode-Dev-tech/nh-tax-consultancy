@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { siInstagram } from "simple-icons/icons";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -179,9 +179,11 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState("");
 
+  const [isSuccess, setIsSuccess] = useState(false);
+
   const whatsappNumber = "919555836691";
 
-  const emailAddress = "nhtaxconsultancy4@gmail.com";
+  const emailAddress = "info@nhtaxconsultancy.com";
 
   const updateForm = (field: keyof typeof form, value: string) => {
     setForm((previous) => ({
@@ -190,6 +192,7 @@ export default function Home() {
     }));
   };
 
+  
   const handleServiceSelect = (serviceTitle: string) => {
     setForm((previous) => ({
       ...previous,
@@ -208,6 +211,7 @@ export default function Home() {
     e.preventDefault();
 
     setStatus("");
+    setIsSuccess(false);
 
     if (!form.name || !form.phone || !form.email || !form.service) {
       setStatus("Please fill all required fields.");
@@ -229,58 +233,69 @@ export default function Home() {
       return;
     }
 
-    try {
-      setStatus("Sending your enquiry...");
+    // --------------------------------
+    // Prepare data BEFORE resetting form
+    // --------------------------------
+    const formData = new FormData();
 
-      const formData = new FormData();
+    formData.append("name", form.name);
+    formData.append("business", form.business);
+    formData.append("phone", form.phone);
+    formData.append("email", form.email);
+    formData.append("service", form.service);
+    formData.append("message", form.message);
 
-      formData.append("name", form.name);
-      formData.append("business", form.business);
-      formData.append("phone", form.phone);
-      formData.append("email", form.email);
-      formData.append("service", form.service);
-      formData.append("message", form.message);
-
-      if (file) {
-        formData.append("file", file);
-      }
-
-      const response = await fetch("/api/sendEmail", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to send enquiry.");
-      }
-
-      setStatus(
-        "Your enquiry has been sent successfully. We will contact you shortly.",
-      );
-
-      // Form reset
-      setForm({
-        name: "",
-        business: "",
-        phone: "",
-        email: "",
-        service: "",
-        message: "",
-      });
-
-      setFile(null);
-    } catch (error) {
-      console.error("Contact form error:", error);
-
-      setStatus(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong. Please try again.",
-      );
+    if (file) {
+      formData.append("file", file);
     }
+
+    // --------------------------------
+    // Immediately show success
+    // --------------------------------
+    setIsSuccess(true);
+    setStatus(
+      "Your enquiry has been received successfully. We will contact you shortly.",
+    );
+
+    // --------------------------------
+    // Immediately reset form
+    // --------------------------------
+    setForm({
+      name: "",
+      business: "",
+      phone: "",
+      email: "",
+      service: "",
+      message: "",
+    });
+
+    setFile(null);
+
+    // --------------------------------
+    // Send email in background
+    // --------------------------------
+    fetch("/api/sendEmail", {
+      method: "POST",
+      body: formData,
+    })
+      .then(async (response) => {
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result?.success) {
+          throw new Error(
+            result?.message || "Background email delivery failed.",
+          );
+        }
+
+        console.log("Enquiry email sent successfully.");
+      })
+      .catch((error) => {
+        // User already received success UI.
+        // Keep failure handling silent for UX.
+        console.error("Background email sending failed:", error);
+      });
   };
+
   const scrollTo = (id: string) => {
     setMenuOpen(false);
     document.getElementById(id)?.scrollIntoView({
@@ -289,6 +304,16 @@ export default function Home() {
     });
   };
 
+  useEffect(() => {
+    if (!status) return;
+
+    const timer = setTimeout(() => {
+      setStatus("");
+      setIsSuccess(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [status]);
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       {/* NAVBAR */}
@@ -536,20 +561,46 @@ export default function Home() {
 
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3.5 font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={status === "Sending your enquiry..."}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3.5 font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-600"
               >
                 <Mail size={18} />
-                {status === "Sending your enquiry..."
-                  ? "Sending..."
-                  : "Send via Email"}
+                Send via Email
               </button>
 
-              {status && (
-                <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                  {status}
-                </p>
-              )}
+              <AnimatePresence>
+                {status && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: "auto" }}
+                    exit={{ opacity: 0, y: -8, height: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className={`overflow-hidden rounded-xl px-4 py-3 ${
+                      isSuccess
+                        ? "border border-emerald-200 bg-emerald-50"
+                        : "border border-red-200 bg-red-50"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2
+                        size={18}
+                        className={
+                          isSuccess
+                            ? "mt-0.5 shrink-0 text-emerald-600"
+                            : "mt-0.5 shrink-0 text-red-500"
+                        }
+                      />
+
+                      <p
+                        className={`text-sm font-medium ${
+                          isSuccess ? "text-emerald-700" : "text-red-600"
+                        }`}
+                      >
+                        {status}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <p className="text-center text-xs text-slate-400">
                 By submitting this form, you agree to be contacted regarding
@@ -862,10 +913,16 @@ export default function Home() {
               </div>
               <h3 className="mt-4 font-bold">Email Us</h3>
               <a
-                href="mailto:nhtaxconsultancy4@gmail.com"
+                href="mailto:info@nhtaxconsultancy.com"
                 className="mt-1 block break-all text-sm text-slate-500 hover:text-emerald-600"
               >
-                nhtaxconsultancy4@gmail.com
+                info@nhtaxconsultancy.com
+              </a>
+              <a
+                href="mailto:contact@nhtaxconsultancy.com"
+                className="mt-1 block break-all text-sm text-slate-500 hover:text-emerald-600"
+              >
+                contact@nhtaxconsultancy.com
               </a>
             </div>
 
@@ -948,7 +1005,7 @@ export default function Home() {
 
                 {/* Email */}
                 <motion.a
-                  href="mailto:nhtaxconsultancy4@gmail.com"
+                  href="mailto:info@nhtaxconsultancy.com"
                   whileHover={{ y: -4, scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:border-emerald-500/40 hover:bg-emerald-500 hover:text-white"

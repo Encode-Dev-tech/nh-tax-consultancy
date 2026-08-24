@@ -1,4 +1,4 @@
-// app/api/contact/route.ts
+// app/api/sendEmail/route.ts
 
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // ======================================================
-// Helpers
+// Helper
 // ======================================================
 
 const escapeHtml = (value: string) => {
@@ -25,9 +25,9 @@ const escapeHtml = (value: string) => {
 
 export async function POST(request: Request) {
   try {
-    // --------------------------------------------------
+    // ==================================================
     // 1. Read multipart/form-data
-    // --------------------------------------------------
+    // ==================================================
 
     const formData = await request.formData();
 
@@ -40,9 +40,9 @@ export async function POST(request: Request) {
 
     const file = formData.get("file");
 
-    // --------------------------------------------------
-    // 2. Validate required fields
-    // --------------------------------------------------
+    // ==================================================
+    // 2. Required fields
+    // ==================================================
 
     if (!name || !phone || !email || !service) {
       return NextResponse.json(
@@ -54,9 +54,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // --------------------------------------------------
+    // ==================================================
     // 3. Validate email
-    // --------------------------------------------------
+    // ==================================================
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -70,9 +70,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // --------------------------------------------------
+    // ==================================================
     // 4. Validate phone
-    // --------------------------------------------------
+    // ==================================================
 
     const phoneRegex = /^[0-9+\-\s()]{7,20}$/;
 
@@ -86,16 +86,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // --------------------------------------------------
+    // ==================================================
     // 5. Environment variables
-    // --------------------------------------------------
+    // ==================================================
 
     const gmailUser = process.env.GMAIL_USER;
     const gmailPassword = process.env.GMAIL_PASSWORD;
-    const mailToInfo = process.env.MAIL_TO_INFO || gmailUser;
 
-    if (!gmailUser || !gmailPassword || !mailToInfo) {
-      console.error("❌ Email environment variables are missing.");
+    const mailFrom = process.env.MAIL_FROM;
+    const mailToInfo = process.env.MAIL_TO_INFO;
+
+    if (!gmailUser || !gmailPassword || !mailFrom || !mailToInfo) {
+      console.error("❌ Missing email environment variables.");
 
       return NextResponse.json(
         {
@@ -107,9 +109,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // --------------------------------------------------
-    // 6. Escape values for HTML email
-    // --------------------------------------------------
+    // ==================================================
+    // 6. Escape HTML values
+    // ==================================================
 
     const safeName = escapeHtml(name);
     const safeBusiness = escapeHtml(business || "Not provided");
@@ -118,9 +120,9 @@ export async function POST(request: Request) {
     const safeService = escapeHtml(service);
     const safeMessage = escapeHtml(message || "Not provided");
 
-    // --------------------------------------------------
+    // ==================================================
     // 7. Prepare attachment
-    // --------------------------------------------------
+    // ==================================================
 
     const attachments: {
       filename: string;
@@ -142,6 +144,7 @@ export async function POST(request: Request) {
         );
       }
 
+      // Allowed file types
       const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
 
       if (!allowedTypes.includes(file.type)) {
@@ -165,30 +168,32 @@ export async function POST(request: Request) {
       });
     }
 
-    // --------------------------------------------------
-    // 8. Create transporter
-    // --------------------------------------------------
+    // ==================================================
+    // 8. Gmail transporter
+    // ==================================================
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
+
       auth: {
         user: gmailUser,
         pass: gmailPassword,
       },
     });
 
-    // --------------------------------------------------
-    // 9. Verify SMTP connection
-    // --------------------------------------------------
+    // ==================================================
+    // 9. Verify SMTP
+    // ==================================================
 
     await transporter.verify();
 
+    console.log("✅ Gmail SMTP connection verified.");
+
     // ==================================================
-    // EMAIL 1
-    // NH TAX CONSULTANCY ADMIN EMAIL
+    // 10. ADMIN EMAIL
     // ==================================================
 
-    const adminSubject = `New Enquiry - ${service} | ${name}`;
+    const adminSubject = `New ${service} Enquiry - ${name}`;
 
     const adminText = `
 New Consultation Request
@@ -218,8 +223,11 @@ Please contact the client regarding this enquiry.
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>New Consultation Request</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+  <title>New ${safeService} Enquiry</title>
 </head>
 
 <body
@@ -256,326 +264,313 @@ Please contact the client regarding this enquiry.
   "
 >
 
-  <!-- HEADER -->
+<!-- HEADER -->
 
-  <tr>
-    <td
-      style="
-        background:#10b981;
-        padding:30px;
-        color:#ffffff;
-      "
-    >
+<tr>
+<td
+  style="
+    background:#10b981;
+    padding:30px;
+    color:#ffffff;
+  "
+>
 
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
+<div
+  style="
+    font-size:24px;
+    font-weight:700;
+  "
+>
+  NH Tax Consultancy
+</div>
 
-          <td>
-            <div
-              style="
-                font-size:24px;
-                font-weight:700;
-                line-height:1.3;
-              "
-            >
-              NH Tax Consultancy
-            </div>
+<div
+  style="
+    margin-top:6px;
+    font-size:13px;
+    color:#d1fae5;
+  "
+>
+  Tax • Accounting • Compliance
+</div>
 
-            <div
-              style="
-                margin-top:6px;
-                font-size:13px;
-                color:#d1fae5;
-              "
-            >
-              Tax • Accounting • Compliance
-            </div>
-          </td>
+</td>
+</tr>
 
-          <td
-            align="right"
-            style="
-              font-size:12px;
-              color:#d1fae5;
-            "
-          >
-            NEW ENQUIRY
-          </td>
+<!-- TITLE -->
 
-        </tr>
-      </table>
+<tr>
+<td style="padding:30px 30px 10px;">
 
-    </td>
-  </tr>
+<div
+  style="
+    font-size:22px;
+    font-weight:700;
+    color:#0f172a;
+  "
+>
+  New ${safeService} Enquiry
+</div>
 
-  <!-- INTRO -->
+<p
+  style="
+    margin:8px 0 0;
+    font-size:14px;
+    line-height:1.7;
+    color:#64748b;
+  "
+>
+  A new enquiry has been submitted through the
+  NH Tax Consultancy website.
+</p>
 
-  <tr>
-    <td style="padding:30px 30px 10px;">
+</td>
+</tr>
 
-      <div
-        style="
-          font-size:22px;
-          font-weight:700;
-          color:#0f172a;
-        "
-      >
-        New Consultation Request
-      </div>
+<!-- SERVICE -->
 
-      <p
-        style="
-          margin:8px 0 0;
-          font-size:14px;
-          line-height:1.7;
-          color:#64748b;
-        "
-      >
-        A new enquiry has been submitted through the
-        NH Tax Consultancy website.
-      </p>
+<tr>
+<td style="padding:20px 30px;">
 
-    </td>
-  </tr>
+<div
+  style="
+    background:#ecfdf5;
+    border:1px solid #a7f3d0;
+    border-radius:12px;
+    padding:18px;
+  "
+>
 
-  <!-- SERVICE -->
+<div
+  style="
+    font-size:12px;
+    color:#047857;
+    font-weight:600;
+    text-transform:uppercase;
+  "
+>
+  Requested Service
+</div>
 
-  <tr>
-    <td style="padding:20px 30px;">
+<div
+  style="
+    margin-top:6px;
+    font-size:18px;
+    font-weight:700;
+    color:#065f46;
+  "
+>
+  ${safeService}
+</div>
 
-      <div
-        style="
-          background:#ecfdf5;
-          border:1px solid #a7f3d0;
-          border-radius:12px;
-          padding:18px;
-        "
-      >
+</div>
 
-        <div
-          style="
-            font-size:12px;
-            color:#047857;
-            font-weight:600;
-            text-transform:uppercase;
-            letter-spacing:.5px;
-          "
-        >
-          Requested Service
-        </div>
+</td>
+</tr>
 
-        <div
-          style="
-            margin-top:6px;
-            font-size:18px;
-            font-weight:700;
-            color:#065f46;
-          "
-        >
-          ${safeService}
-        </div>
+<!-- CLIENT DETAILS -->
 
-      </div>
+<tr>
+<td style="padding:5px 30px 20px;">
 
-    </td>
-  </tr>
+<div
+  style="
+    font-size:17px;
+    font-weight:700;
+    color:#0f172a;
+    margin-bottom:14px;
+  "
+>
+  Client Details
+</div>
 
-  <!-- CLIENT DETAILS -->
+<table
+  width="100%"
+  cellpadding="0"
+  cellspacing="0"
+  style="font-size:14px;"
+>
 
-  <tr>
-    <td style="padding:5px 30px 20px;">
+<tr>
+<td
+  style="
+    padding:10px 0;
+    color:#64748b;
+    width:38%;
+    border-bottom:1px solid #f1f5f9;
+  "
+>
+  Full Name
+</td>
 
-      <div
-        style="
-          font-size:17px;
-          font-weight:700;
-          color:#0f172a;
-          margin-bottom:14px;
-        "
-      >
-        Client Details
-      </div>
+<td
+  style="
+    padding:10px 0;
+    color:#0f172a;
+    font-weight:600;
+    border-bottom:1px solid #f1f5f9;
+  "
+>
+  ${safeName}
+</td>
+</tr>
 
-      <table
-        width="100%"
-        cellpadding="0"
-        cellspacing="0"
-        style="font-size:14px;"
-      >
+<tr>
+<td
+  style="
+    padding:10px 0;
+    color:#64748b;
+    border-bottom:1px solid #f1f5f9;
+  "
+>
+  Business / Company
+</td>
 
-        <tr>
-          <td
-            style="
-              padding:10px 0;
-              color:#64748b;
-              width:38%;
-              border-bottom:1px solid #f1f5f9;
-            "
-          >
-            Full Name
-          </td>
+<td
+  style="
+    padding:10px 0;
+    color:#0f172a;
+    border-bottom:1px solid #f1f5f9;
+  "
+>
+  ${safeBusiness}
+</td>
+</tr>
 
-          <td
-            style="
-              padding:10px 0;
-              color:#0f172a;
-              font-weight:600;
-              border-bottom:1px solid #f1f5f9;
-            "
-          >
-            ${safeName}
-          </td>
-        </tr>
+<tr>
+<td
+  style="
+    padding:10px 0;
+    color:#64748b;
+    border-bottom:1px solid #f1f5f9;
+  "
+>
+  Phone
+</td>
 
-        <tr>
-          <td
-            style="
-              padding:10px 0;
-              color:#64748b;
-              border-bottom:1px solid #f1f5f9;
-            "
-          >
-            Business / Company
-          </td>
+<td
+  style="
+    padding:10px 0;
+    color:#0f172a;
+    border-bottom:1px solid #f1f5f9;
+  "
+>
+  ${safePhone}
+</td>
+</tr>
 
-          <td
-            style="
-              padding:10px 0;
-              color:#0f172a;
-              border-bottom:1px solid #f1f5f9;
-            "
-          >
-            ${safeBusiness}
-          </td>
-        </tr>
+<tr>
+<td
+  style="
+    padding:10px 0;
+    color:#64748b;
+  "
+>
+  Email
+</td>
 
-        <tr>
-          <td
-            style="
-              padding:10px 0;
-              color:#64748b;
-              border-bottom:1px solid #f1f5f9;
-            "
-          >
-            Phone
-          </td>
+<td
+  style="
+    padding:10px 0;
+    color:#0f172a;
+  "
+>
+  ${safeEmail}
+</td>
+</tr>
 
-          <td
-            style="
-              padding:10px 0;
-              color:#0f172a;
-              border-bottom:1px solid #f1f5f9;
-            "
-          >
-            ${safePhone}
-          </td>
-        </tr>
+</table>
 
-        <tr>
-          <td
-            style="
-              padding:10px 0;
-              color:#64748b;
-            "
-          >
-            Email
-          </td>
+</td>
+</tr>
 
-          <td
-            style="
-              padding:10px 0;
-              color:#0f172a;
-            "
-          >
-            ${safeEmail}
-          </td>
-        </tr>
+<!-- REQUIREMENT -->
 
-      </table>
+<tr>
+<td style="padding:10px 30px 25px;">
 
-    </td>
-  </tr>
+<div
+  style="
+    font-size:17px;
+    font-weight:700;
+    color:#0f172a;
+    margin-bottom:12px;
+  "
+>
+  Client Requirement
+</div>
 
-  <!-- REQUIREMENT -->
+<div
+  style="
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    padding:18px;
+    font-size:14px;
+    line-height:1.8;
+    color:#475569;
+    white-space:pre-line;
+  "
+>
+${safeMessage}
+</div>
 
-  <tr>
-    <td style="padding:10px 30px 25px;">
+</td>
+</tr>
 
-      <div
-        style="
-          font-size:17px;
-          font-weight:700;
-          color:#0f172a;
-          margin-bottom:12px;
-        "
-      >
-        Client Requirement
-      </div>
+<!-- ATTACHMENT -->
 
-      <div
-        style="
-          background:#f8fafc;
-          border:1px solid #e2e8f0;
-          border-radius:12px;
-          padding:18px;
-          font-size:14px;
-          line-height:1.8;
-          color:#475569;
-          white-space:pre-line;
-        "
-      >
-        ${safeMessage}
-      </div>
+<tr>
+<td style="padding:0 30px 30px;">
 
-    </td>
-  </tr>
+<div
+  style="
+    background:#f8fafc;
+    border-radius:10px;
+    padding:13px 15px;
+    font-size:13px;
+    color:#64748b;
+  "
+>
+<strong style="color:#334155;">
+Attachment:
+</strong>
 
-  <!-- ATTACHMENT -->
+${escapeHtml(attachmentName)}
 
-  <tr>
-    <td style="padding:0 30px 30px;">
+</div>
 
-      <div
-        style="
-          background:#f8fafc;
-          border-radius:10px;
-          padding:13px 15px;
-          font-size:13px;
-          color:#64748b;
-        "
-      >
-        <strong style="color:#334155;">
-          Attachment:
-        </strong>
-        ${escapeHtml(attachmentName)}
-      </div>
+</td>
+</tr>
 
-    </td>
-  </tr>
+<!-- FOOTER -->
 
-  <!-- FOOTER -->
+<tr>
+<td
+  style="
+    background:#0f172a;
+    padding:22px 30px;
+    color:#94a3b8;
+    font-size:12px;
+  "
+>
 
-  <tr>
-    <td
-      style="
-        background:#0f172a;
-        padding:22px 30px;
-        color:#94a3b8;
-        font-size:12px;
-        line-height:1.6;
-      "
-    >
-      <strong style="color:#ffffff;">
-        NH Tax Consultancy
-      </strong>
-      <br />
-      GST • Income Tax • TDS • Accounting • Audit
-      <br />
-      <span style="color:#64748b;">
-        This enquiry was submitted through the website.
-      </span>
-    </td>
-  </tr>
+<strong style="color:#ffffff;">
+NH Tax Consultancy
+</strong>
+
+<br />
+
+GST • Income Tax • TDS • Accounting • Audit
+
+<br />
+
+<span style="color:#64748b;">
+This enquiry was submitted through the website.
+</span>
+
+</td>
+</tr>
 
 </table>
 
@@ -587,19 +582,47 @@ Please contact the client regarding this enquiry.
 </html>
 `;
 
+    const adminEmailResponse = await transporter.sendMail({
+      // IMPORTANT:
+      // contact@nhtaxconsultancy.com must be verified
+      // as a Gmail "Send as" address.
+      from: `"NH Tax Consultancy Website" <${mailFrom}>`,
+
+      // Admin destination
+      to: mailToInfo,
+
+      // IMPORTANT:
+      // Admin clicks Reply → directly to client
+      replyTo: email,
+
+      subject: adminSubject,
+
+      text: adminText,
+
+      html: adminHtml,
+
+      attachments,
+    });
+
+    console.log("✅ Admin email sent:", {
+      messageId: adminEmailResponse.messageId,
+      accepted: adminEmailResponse.accepted,
+      rejected: adminEmailResponse.rejected,
+      response: adminEmailResponse.response,
+    });
+
     // ==================================================
-    // EMAIL 2
-    // CUSTOMER CONFIRMATION EMAIL
+    // 11. CUSTOMER CONFIRMATION EMAIL
     // ==================================================
 
-    const customerSubject = `Thank You for Contacting NH Tax Consultancy`;
+    const customerSubject = `Thank You for Your ${service} Enquiry - NH Tax Consultancy`;
 
     const customerText = `
 Dear ${name},
 
 Thank you for contacting NH Tax Consultancy.
 
-We have successfully received your enquiry.
+We have successfully received your ${service} enquiry.
 
 Your Enquiry Details
 -------------------------
@@ -617,7 +640,7 @@ Our team will review your enquiry and contact you regarding the next steps.
 For any further information, you can contact us at:
 
 Email:
-${mailToInfo}
+${mailFrom}
 
 Phone:
 +91 95558 36691
@@ -632,13 +655,18 @@ Noida, Uttar Pradesh
     const customerHtml = `
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8" />
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
   />
-  <title>Thank You - NH Tax Consultancy</title>
+
+  <title>
+    Thank You - NH Tax Consultancy
+  </title>
 </head>
 
 <body
@@ -656,8 +684,12 @@ Noida, Uttar Pradesh
   cellpadding="0"
   cellspacing="0"
   border="0"
-  style="background:#f1f5f9;padding:35px 15px;"
+  style="
+    background:#f1f5f9;
+    padding:35px 15px;
+  "
 >
+
 <tr>
 <td align="center">
 
@@ -675,405 +707,431 @@ Noida, Uttar Pradesh
   "
 >
 
-  <!-- HEADER -->
+<!-- HEADER -->
 
-  <tr>
-    <td
-      style="
-        background:#10b981;
-        padding:32px 30px;
-        text-align:center;
-        color:#ffffff;
-      "
-    >
+<tr>
 
-      <div
-        style="
-          font-size:26px;
-          font-weight:700;
-          line-height:1.3;
-        "
-      >
-        NH Tax Consultancy
-      </div>
+<td
+  style="
+    background:#10b981;
+    padding:32px 30px;
+    text-align:center;
+    color:#ffffff;
+  "
+>
 
-      <div
-        style="
-          margin-top:7px;
-          font-size:13px;
-          color:#d1fae5;
-        "
-      >
-        Tax • Accounting • Compliance
-      </div>
+<div
+  style="
+    font-size:26px;
+    font-weight:700;
+  "
+>
+NH Tax Consultancy
+</div>
 
-    </td>
-  </tr>
+<div
+  style="
+    margin-top:7px;
+    font-size:13px;
+    color:#d1fae5;
+  "
+>
+Tax • Accounting • Compliance
+</div>
 
-  <!-- SUCCESS -->
+</td>
 
-  <tr>
-    <td
-      style="
-        padding:35px 30px 15px;
-        text-align:center;
-      "
-    >
+</tr>
 
-      <div
-        style="
-          display:inline-block;
-          width:54px;
-          height:54px;
-          line-height:54px;
-          border-radius:50%;
-          background:#ecfdf5;
-          color:#059669;
-          font-size:28px;
-          font-weight:700;
-        "
-      >
-        ✓
-      </div>
+<!-- SUCCESS -->
 
-      <h1
-        style="
-          margin:18px 0 8px;
-          font-size:24px;
-          color:#0f172a;
-        "
-      >
-        Thank You, ${safeName}
-      </h1>
+<tr>
 
-      <p
-        style="
-          margin:0 auto;
-          max-width:480px;
-          font-size:14px;
-          line-height:1.7;
-          color:#64748b;
-        "
-      >
-        Your enquiry has been successfully received by
-        NH Tax Consultancy.
-      </p>
+<td
+  style="
+    padding:35px 30px 15px;
+    text-align:center;
+  "
+>
 
-    </td>
-  </tr>
+<div
+  style="
+    display:inline-block;
+    width:54px;
+    height:54px;
+    line-height:54px;
+    border-radius:50%;
+    background:#ecfdf5;
+    color:#059669;
+    font-size:28px;
+    font-weight:700;
+  "
+>
+✓
+</div>
 
-  <!-- MESSAGE -->
+<h1
+  style="
+    margin:18px 0 8px;
+    font-size:24px;
+    color:#0f172a;
+  "
+>
+Thank You, ${safeName}
+</h1>
 
-  <tr>
-    <td style="padding:20px 30px;">
+<p
+  style="
+    margin:0 auto;
+    max-width:480px;
+    font-size:14px;
+    line-height:1.7;
+    color:#64748b;
+  "
+>
+Your ${safeService} enquiry has been successfully
+received by NH Tax Consultancy.
+</p>
 
-      <div
-        style="
-          background:#ecfdf5;
-          border:1px solid #a7f3d0;
-          border-radius:14px;
-          padding:20px;
-        "
-      >
+</td>
 
-        <div
-          style="
-            font-size:13px;
-            color:#047857;
-            font-weight:600;
-          "
-        >
-          Requested Service
-        </div>
+</tr>
 
-        <div
-          style="
-            margin-top:7px;
-            font-size:19px;
-            font-weight:700;
-            color:#065f46;
-          "
-        >
-          ${safeService}
-        </div>
+<!-- SERVICE -->
 
-      </div>
+<tr>
 
-    </td>
-  </tr>
+<td style="padding:20px 30px;">
 
-  <!-- ENQUIRY SUMMARY -->
+<div
+  style="
+    background:#ecfdf5;
+    border:1px solid #a7f3d0;
+    border-radius:14px;
+    padding:20px;
+  "
+>
 
-  <tr>
-    <td style="padding:10px 30px 25px;">
+<div
+  style="
+    font-size:13px;
+    color:#047857;
+    font-weight:600;
+  "
+>
+Requested Service
+</div>
 
-      <h2
-        style="
-          margin:0 0 15px;
-          font-size:18px;
-          color:#0f172a;
-        "
-      >
-        Your Enquiry
-      </h2>
+<div
+  style="
+    margin-top:7px;
+    font-size:19px;
+    font-weight:700;
+    color:#065f46;
+  "
+>
+${safeService}
+</div>
 
-      <table
-        width="100%"
-        cellpadding="0"
-        cellspacing="0"
-        style="font-size:14px;"
-      >
+</div>
 
-        <tr>
-          <td
-            style="
-              padding:10px 0;
-              color:#64748b;
-              width:38%;
-              border-bottom:1px solid #f1f5f9;
-            "
-          >
-            Name
-          </td>
+</td>
 
-          <td
-            style="
-              padding:10px 0;
-              color:#0f172a;
-              font-weight:600;
-              border-bottom:1px solid #f1f5f9;
-            "
-          >
-            ${safeName}
-          </td>
-        </tr>
+</tr>
 
-        <tr>
-          <td
-            style="
-              padding:10px 0;
-              color:#64748b;
-              border-bottom:1px solid #f1f5f9;
-            "
-          >
-            Business
-          </td>
+<!-- ENQUIRY -->
 
-          <td
-            style="
-              padding:10px 0;
-              color:#0f172a;
-              border-bottom:1px solid #f1f5f9;
-            "
-          >
-            ${safeBusiness}
-          </td>
-        </tr>
+<tr>
 
-        <tr>
-          <td
-            style="
-              padding:10px 0;
-              color:#64748b;
-            "
-          >
-            Phone
-          </td>
+<td style="padding:10px 30px 25px;">
 
-          <td
-            style="
-              padding:10px 0;
-              color:#0f172a;
-            "
-          >
-            ${safePhone}
-          </td>
-        </tr>
+<h2
+  style="
+    margin:0 0 15px;
+    font-size:18px;
+    color:#0f172a;
+  "
+>
+Your Enquiry
+</h2>
 
-      </table>
+<table
+  width="100%"
+  cellpadding="0"
+  cellspacing="0"
+  style="font-size:14px;"
+>
 
-    </td>
-  </tr>
+<tr>
 
-  <!-- REQUIREMENT -->
+<td
+  style="
+    padding:10px 0;
+    color:#64748b;
+    width:38%;
+    border-bottom:1px solid #f1f5f9;
+  "
+>
+Name
+</td>
 
-  <tr>
-    <td style="padding:0 30px 25px;">
+<td
+  style="
+    padding:10px 0;
+    color:#0f172a;
+    font-weight:600;
+    border-bottom:1px solid #f1f5f9;
+  "
+>
+${safeName}
+</td>
 
-      <h2
-        style="
-          margin:0 0 12px;
-          font-size:18px;
-          color:#0f172a;
-        "
-      >
-        What You Submitted
-      </h2>
+</tr>
 
-      <div
-        style="
-          background:#f8fafc;
-          border:1px solid #e2e8f0;
-          border-radius:12px;
-          padding:18px;
-          font-size:14px;
-          line-height:1.8;
-          color:#475569;
-          white-space:pre-line;
-        "
-      >
-        ${safeMessage}
-      </div>
+<tr>
 
-    </td>
-  </tr>
+<td
+  style="
+    padding:10px 0;
+    color:#64748b;
+    border-bottom:1px solid #f1f5f9;
+  "
+>
+Business
+</td>
 
-  <!-- RESPONSE -->
+<td
+  style="
+    padding:10px 0;
+    color:#0f172a;
+    border-bottom:1px solid #f1f5f9;
+  "
+>
+${safeBusiness}
+</td>
 
-  <tr>
-    <td style="padding:0 30px 30px;">
+</tr>
 
-      <div
-        style="
-          border-left:4px solid #10b981;
-          background:#f8fafc;
-          padding:18px 20px;
-          border-radius:0 10px 10px 0;
-        "
-      >
+<tr>
 
-        <div
-          style="
-            font-size:15px;
-            font-weight:700;
-            color:#0f172a;
-          "
-        >
-          What happens next?
-        </div>
+<td
+  style="
+    padding:10px 0;
+    color:#64748b;
+  "
+>
+Phone
+</td>
 
-        <p
-          style="
-            margin:8px 0 0;
-            font-size:14px;
-            line-height:1.7;
-            color:#64748b;
-          "
-        >
-          Our team will review your enquiry and contact you
-          regarding the service requirements, documentation
-          and next steps.
-        </p>
+<td
+  style="
+    padding:10px 0;
+    color:#0f172a;
+  "
+>
+${safePhone}
+</td>
 
-      </div>
+</tr>
 
-    </td>
-  </tr>
+</table>
 
-  <!-- CONTACT -->
+</td>
 
-  <tr>
-    <td
-      style="
-        background:#f8fafc;
-        padding:25px 30px;
-        border-top:1px solid #e2e8f0;
-      "
-    >
+</tr>
 
-      <div
-        style="
-          font-size:15px;
-          font-weight:700;
-          color:#0f172a;
-          margin-bottom:12px;
-        "
-      >
-        Need help?
-      </div>
+<!-- REQUIREMENT -->
 
-      <div
-        style="
-          font-size:13px;
-          line-height:1.9;
-          color:#64748b;
-        "
-      >
-        Email:
-        <a
-          href="mailto:${mailToInfo}"
-          style="
-            color:#059669;
-            text-decoration:none;
-            font-weight:600;
-          "
-        >
-          ${mailToInfo}
-        </a>
+<tr>
 
-        <br />
+<td style="padding:0 30px 25px;">
 
-        Phone:
-        <a
-          href="tel:+919555836691"
-          style="
-            color:#059669;
-            text-decoration:none;
-            font-weight:600;
-          "
-        >
-          +91 95558 36691
-        </a>
+<h2
+  style="
+    margin:0 0 12px;
+    font-size:18px;
+    color:#0f172a;
+  "
+>
+What You Submitted
+</h2>
 
-        <br />
+<div
+  style="
+    background:#f8fafc;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    padding:18px;
+    font-size:14px;
+    line-height:1.8;
+    color:#475569;
+    white-space:pre-line;
+  "
+>
+${safeMessage}
+</div>
 
-        A-12 Dharmapali Palace, Noida Sector-27,
-        Atta Bhoja Market, U.P. 201301
-      </div>
+</td>
 
-    </td>
-  </tr>
+</tr>
 
-  <!-- FOOTER -->
+<!-- NEXT STEP -->
 
-  <tr>
-    <td
-      style="
-        background:#0f172a;
-        padding:25px 30px;
-        text-align:center;
-        color:#94a3b8;
-        font-size:12px;
-        line-height:1.7;
-      "
-    >
+<tr>
 
-      <strong
-        style="
-          color:#ffffff;
-          font-size:14px;
-        "
-      >
-        NH Tax Consultancy
-      </strong>
+<td style="padding:0 30px 30px;">
 
-      <br />
+<div
+  style="
+    border-left:4px solid #10b981;
+    background:#f8fafc;
+    padding:18px 20px;
+    border-radius:0 10px 10px 0;
+  "
+>
 
-      GST • Income Tax • TDS • Accounting • Audit
+<div
+  style="
+    font-size:15px;
+    font-weight:700;
+    color:#0f172a;
+  "
+>
+What happens next?
+</div>
 
-      <br />
+<p
+  style="
+    margin:8px 0 0;
+    font-size:14px;
+    line-height:1.7;
+    color:#64748b;
+  "
+>
+Our team will review your enquiry and contact you
+regarding the service requirements, documentation
+and next steps.
+</p>
 
-      <span style="color:#64748b;">
-        Thank you for choosing NH Tax Consultancy.
-      </span>
+</div>
 
-    </td>
-  </tr>
+</td>
+
+</tr>
+
+<!-- CONTACT -->
+
+<tr>
+
+<td
+  style="
+    background:#f8fafc;
+    padding:25px 30px;
+    border-top:1px solid #e2e8f0;
+  "
+>
+
+<div
+  style="
+    font-size:15px;
+    font-weight:700;
+    color:#0f172a;
+    margin-bottom:12px;
+  "
+>
+Need help?
+</div>
+
+<div
+  style="
+    font-size:13px;
+    line-height:1.9;
+    color:#64748b;
+  "
+>
+
+Email:
+
+<a
+  href="mailto:${mailFrom}"
+  style="
+    color:#059669;
+    text-decoration:none;
+    font-weight:600;
+  "
+>
+${mailFrom}
+</a>
+
+<br />
+
+Phone:
+
+<a
+  href="tel:+919555836691"
+  style="
+    color:#059669;
+    text-decoration:none;
+    font-weight:600;
+  "
+>
++91 95558 36691
+</a>
+
+<br />
+
+A-12 Dharmapali Palace, Noida Sector-27,
+Atta Bhoja Market, U.P. 201301
+
+</div>
+
+</td>
+
+</tr>
+
+<!-- FOOTER -->
+
+<tr>
+
+<td
+  style="
+    background:#0f172a;
+    padding:25px 30px;
+    text-align:center;
+    color:#94a3b8;
+    font-size:12px;
+    line-height:1.7;
+  "
+>
+
+<strong
+  style="
+    color:#ffffff;
+    font-size:14px;
+  "
+>
+NH Tax Consultancy
+</strong>
+
+<br />
+
+GST • Income Tax • TDS • Accounting • Audit
+
+<br />
+
+<span style="color:#64748b;">
+Thank you for choosing NH Tax Consultancy.
+</span>
+
+</td>
+
+</tr>
 
 </table>
 
 </td>
 </tr>
+
 </table>
 
 </body>
@@ -1081,38 +1139,32 @@ Noida, Uttar Pradesh
 `;
 
     // ==================================================
-    // 10. Send ADMIN email first
-    // ==================================================
-
-    const adminEmailResponse = await transporter.sendMail({
-      from: `"NH Tax Consultancy Website" <${gmailUser}>`,
-      to: mailToInfo,
-      replyTo: email,
-      subject: adminSubject,
-      text: adminText,
-      html: adminHtml,
-      attachments,
-    });
-
-    console.log("✅ Admin email sent:", adminEmailResponse.messageId);
-
-    // ==================================================
-    // 11. Send CUSTOMER confirmation email
+    // SEND CUSTOMER EMAIL
     // ==================================================
 
     const customerEmailResponse = await transporter.sendMail({
-      from: `"NH Tax Consultancy" <${gmailUser}>`,
+      from: `"NH Tax Consultancy" <${mailFrom}>`,
+
+      // Customer
       to: email,
-      replyTo: mailToInfo,
+
+      // IMPORTANT:
+      // Customer clicks Reply → contact@nhtaxconsultancy.com
+      replyTo: mailFrom,
+
       subject: customerSubject,
+
       text: customerText,
+
       html: customerHtml,
     });
 
-    console.log(
-      "✅ Customer confirmation email sent:",
-      customerEmailResponse.messageId,
-    );
+    console.log("✅ Customer confirmation email sent:", {
+      messageId: customerEmailResponse.messageId,
+      accepted: customerEmailResponse.accepted,
+      rejected: customerEmailResponse.rejected,
+      response: customerEmailResponse.response,
+    });
 
     // ==================================================
     // 12. Success
